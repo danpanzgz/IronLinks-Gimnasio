@@ -197,34 +197,43 @@ DECLARE
     v_conflicto_monitor NUMBER;
     v_conflicto_sala    NUMBER;
 BEGIN
-    -- Verificar que el monitor no tiene ya otra clase ese día y hora
-    SELECT COUNT(*)
-    INTO v_conflicto_monitor
-    FROM clase
-    WHERE id_monitor = :NEW.id_monitor
-      AND dia_semana  = :NEW.dia_semana
-      AND hora_inicio = :NEW.hora_inicio
-      AND activa      = 'S'
-      AND id_clase   != NVL(:NEW.id_clase, -1);  -- Excluir la propia fila en UPDATE
+    -- Solo validar solapamiento si cambian campos de horario/sala/monitor
+    -- Evita el error ORA-04091 cuando el UPDATE es solo de plazas_libres
+    IF INSERTING
+       OR (UPDATING AND (
+               :NEW.id_monitor  != :OLD.id_monitor  OR
+               :NEW.id_sala     != :OLD.id_sala      OR
+               :NEW.dia_semana  != :OLD.dia_semana   OR
+               :NEW.hora_inicio != :OLD.hora_inicio
+           ))
+    THEN
+        SELECT COUNT(*)
+        INTO v_conflicto_monitor
+        FROM clase
+        WHERE id_monitor  = :NEW.id_monitor
+          AND dia_semana  = :NEW.dia_semana
+          AND hora_inicio = :NEW.hora_inicio
+          AND activa      = 'S'
+          AND id_clase   != NVL(:NEW.id_clase, -1);
 
-    IF v_conflicto_monitor > 0 THEN
-        RAISE_APPLICATION_ERROR(-20003,
-            'El monitor ya tiene una clase asignada ese día y hora.');
-    END IF;
+        IF v_conflicto_monitor > 0 THEN
+            RAISE_APPLICATION_ERROR(-20003,
+                'El monitor ya tiene una clase asignada ese día y hora.');
+        END IF;
 
-    -- Verificar que la sala no está ocupada a esa hora
-    SELECT COUNT(*)
-    INTO v_conflicto_sala
-    FROM clase
-    WHERE id_sala    = :NEW.id_sala
-      AND dia_semana  = :NEW.dia_semana
-      AND hora_inicio = :NEW.hora_inicio
-      AND activa      = 'S'
-      AND id_clase   != NVL(:NEW.id_clase, -1);
+        SELECT COUNT(*)
+        INTO v_conflicto_sala
+        FROM clase
+        WHERE id_sala    = :NEW.id_sala
+          AND dia_semana  = :NEW.dia_semana
+          AND hora_inicio = :NEW.hora_inicio
+          AND activa      = 'S'
+          AND id_clase   != NVL(:NEW.id_clase, -1);
 
-    IF v_conflicto_sala > 0 THEN
-        RAISE_APPLICATION_ERROR(-20004,
-            'La sala ya está ocupada a esa hora. Elige otra sala u hora.');
+        IF v_conflicto_sala > 0 THEN
+            RAISE_APPLICATION_ERROR(-20004,
+                'La sala ya está ocupada a esa hora. Elige otra sala u hora.');
+        END IF;
     END IF;
 END trg_no_solapamiento_clase;
 /
