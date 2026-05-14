@@ -35,8 +35,8 @@ const diagram = `erDiagram
     varchar nombre
     varchar apellidos
     varchar especialidad
-    varchar telefono
-    varchar email
+    varchar telefono UK
+    varchar email UK
     date fecha_alta
   }
   TARIFA {
@@ -54,7 +54,7 @@ const diagram = `erDiagram
     varchar apellidos
     date fecha_nac
     varchar telefono
-    varchar email
+    varchar email UK
     date fecha_alta
     varchar estado
   }
@@ -96,7 +96,7 @@ const diagram = `erDiagram
   }
   AUDITORIA_SOCIOS {
     number id_auditoria PK
-    number id_socio FK
+    number id_socio
     varchar accion
     varchar campo
     varchar valor_antes
@@ -112,7 +112,6 @@ const diagram = `erDiagram
   CLASE ||--o{ INSCRIPCION_CLASE : "tiene"
   SALA ||--o{ CLASE : "alberga"
   MONITOR ||--o{ CLASE : "imparte"
-  SOCIO ||--o{ AUDITORIA_SOCIOS : "registra"
 `;
 const { svg } = await mermaid.render('erd-svg', diagram);
 document.getElementById('erd').innerHTML = svg;
